@@ -48,7 +48,7 @@ const (
 	VERSION = 4
 
 	// each metric starts with prefix "/intel/docker/<docker_id>"
-	lengthOfNsPrefix = 3
+	lengthOfNsPrefix = 5
 )
 
 type containerData struct {
@@ -159,7 +159,12 @@ func (d *docker) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, e
 		for _, id := range ids {
 			ns := make([]core.NamespaceElement, len(mt.Namespace()))
 			copy(ns, mt.Namespace())
-			ns[2].Value = id
+			pod := d.containers[id].Info.Labels["io.kubernetes.pod.name"]
+			namespace := d.containers[id].Info.Labels["io.kubernetes.pod.namespace"]
+			container := d.containers[id].Info.Labels["io.kubernetes.container.name"]
+			ns[2].Value = namespace
+			ns[3].Value = pod
+			ns[4].Value = container
 
 			// omit "spec" metrics for root
 			if id == "root" && mt.Namespace()[lengthOfNsPrefix].Value == "spec" {
@@ -378,7 +383,9 @@ func (d *docker) GetMetricTypes(_ plugin.ConfigType) ([]plugin.MetricType, error
 	for _, metricName := range dockerMetrics {
 
 		ns := core.NewNamespace(NS_VENDOR, NS_PLUGIN).
-			AddDynamicElement("docker_id", "an id of docker container")
+			AddDynamicElement("namespace", "kubernetes namespace").
+			AddDynamicElement("pod", "pod name").
+			AddDynamicElement("container", "docker container name")
 
 		if ns, err = nscreator.createMetricNamespace(ns, metricName); err != nil {
 			// skip this metric name which is not supported
