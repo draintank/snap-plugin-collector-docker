@@ -162,9 +162,14 @@ func (d *docker) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, e
 			pod := d.containers[id].Info.Labels["io.kubernetes.pod.name"]
 			namespace := d.containers[id].Info.Labels["io.kubernetes.pod.namespace"]
 			container := d.containers[id].Info.Labels["io.kubernetes.container.name"]
-			ns[2].Value = namespace
-			ns[3].Value = pod
-			ns[4].Value = container
+
+			ns[2].Value = getK8sLabelOrDefault(namespace)
+			ns[3].Value = getK8sLabelOrDefault(pod)
+			if len(container) > 0 {
+				ns[4].Value = container
+			} else {
+				ns[4].Value = id
+			}
 
 			// omit "spec" metrics for root
 			if id == "root" && mt.Namespace()[lengthOfNsPrefix].Value == "spec" {
@@ -358,6 +363,14 @@ func (d *docker) CollectMetrics(mts []plugin.MetricType) ([]plugin.MetricType, e
 	}
 
 	return metrics, nil
+}
+
+func getK8sLabelOrDefault(label string) string {
+	if len(label) > 0 {
+		return label
+	}
+
+	return "none"
 }
 
 // GetConfigPolicy returns plugin config policy
