@@ -164,16 +164,16 @@ func (c *collector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error)
 			ns := make([]plugin.NamespaceElement, len(mt.Namespace))
 			copy(ns, mt.Namespace)
 
-			pod := d.containers[id].Info.Labels["io.kubernetes.pod.name"]
-			namespace := d.containers[id].Info.Labels["io.kubernetes.pod.namespace"]
-			container := d.containers[id].Info.Labels["io.kubernetes.container.name"]
+			pod := c.containers[rid].Specification.Labels["io.kubernetes.pod.name"]
+			namespace := c.containers[rid].Specification.Labels["io.kubernetes.pod.namespace"]
+			container_name := c.containers[rid].Specification.Labels["io.kubernetes.container.name"]
 
 			ns[2].Value = getK8sLabelOrDefault(namespace)
 			ns[3].Value = getK8sLabelOrDefault(pod)
-			if len(container) > 0 {
-				ns[4].Value = container
+			if len(container_name) > 0 {
+				ns[4].Value = container_name
 			} else {
-				ns[4].Value = id
+				ns[4].Value = rid
 			}
 
 			// omit "spec" metrics for root
