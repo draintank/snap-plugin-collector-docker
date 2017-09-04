@@ -47,7 +47,7 @@ const (
 	PLUGIN_VERSION = 9
 
 	// each metric starts with prefix "/intel/docker/<docker_id>"
-	lengthOfNsPrefix = 3
+	lengthOfNsPrefix = 5
 )
 
 var getters map[string]container.StatGetter = map[string]container.StatGetter{
@@ -163,7 +163,18 @@ func (c *collector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error)
 		for rid := range ridGroup {
 			ns := make([]plugin.NamespaceElement, len(mt.Namespace))
 			copy(ns, mt.Namespace)
-			ns[2].Value = rid
+
+			pod := d.containers[id].Info.Labels["io.kubernetes.pod.name"]
+			namespace := d.containers[id].Info.Labels["io.kubernetes.pod.namespace"]
+			container := d.containers[id].Info.Labels["io.kubernetes.container.name"]
+
+			ns[2].Value = getK8sLabelOrDefault(namespace)
+			ns[3].Value = getK8sLabelOrDefault(pod)
+			if len(container) > 0 {
+				ns[4].Value = container
+			} else {
+				ns[4].Value = id
+			}
 
 			// omit "spec" metrics for root
 			if rid == "root" && mt.Namespace[lengthOfNsPrefix].Value == "spec" {
@@ -687,6 +698,14 @@ func (c *collector) CollectMetrics(mts []plugin.Metric) ([]plugin.Metric, error)
 	return metrics, nil
 }
 
+func getK8sLabelOrDefault(label string) string {
+	if len(label) > 0 {
+		return label
+	}
+
+	return "none"
+}
+
 // GetMetricTypes returns list of available metrics
 func (c *collector) GetMetricTypes(cfg plugin.Config) ([]plugin.Metric, error) {
 	var err error
@@ -702,7 +721,9 @@ func (c *collector) GetMetricTypes(cfg plugin.Config) ([]plugin.Metric, error) {
 	nscreator := nsCreator{dynamicElements: definedDynamicElements}
 	for _, metricName := range dockerMetrics {
 		ns := plugin.NewNamespace(PLUGIN_VENDOR, PLUGIN_NAME).
-			AddDynamicElement("docker_id", "an id of docker container")
+			AddDynamicElement("namespace", "kubernetes namespace").
+			AddDynamicElement("pod", "pod name").
+			AddDynamicElement("container", "docker container name")
 
 		if ns, err = nscreator.createMetricNamespace(ns, metricName); err != nil {
 			// skip this metric name which is not supported
