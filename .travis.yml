@@ -17,7 +17,7 @@ matrix:
   - go: 1.7.x
     env: TEST_TYPE=build
 before_install:
-- mv $HOME/gopath/src/github.com/draintank/ $HOME/gopath/src/github.com/intelsdi-x/
+- ln -s $HOME/gopath/src/github.com/draintank $HOME/gopath/src/github.com/intelsdi-x
 - "[[ -d $SNAP_PLUGIN_SOURCE ]] || mkdir -p $ORG_PATH && ln -s $TRAVIS_BUILD_DIR $SNAP_PLUGIN_SOURCE"
 install:
 - cd $SNAP_PLUGIN_SOURCE
